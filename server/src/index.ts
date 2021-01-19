@@ -1,4 +1,5 @@
 import express from 'express'
+import cors from 'cors'
 
 // db
 import {MikroORM} from '@mikro-orm/core'
@@ -30,6 +31,11 @@ const main = async() => {
   
   const app = express();
 
+  app.use(cors({
+    origin: "http://localhost:3000",
+    credentials: true
+  }))
+
   app.use(
     session({
       name: 'qid',
@@ -54,7 +60,10 @@ const main = async() => {
     context: ({req,res}): MyContext => ({em: orm.em,req,res})
   });
 
-  apolloServer.applyMiddleware({app})
+  apolloServer.applyMiddleware({
+    app,
+    cors: false//{origin: "http://localhost:300"}
+  })
 
   app.listen(4500, () => {
     console.log('server is running on port : 4500')

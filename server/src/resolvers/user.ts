@@ -63,7 +63,7 @@ export class UserResolver {
       return {
         errors: [
           {
-            field: "passwod",
+            field: "password",
             message: "length must be 6 digit",
           },
         ],
