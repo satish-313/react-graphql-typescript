@@ -7,29 +7,14 @@ import {
 } from "@chakra-ui/react";
 import { Wrapper } from "../components/Wrapper";
 import { InputField } from "../components/InputField";
-import { useMutation } from "urql";
 import { toErrorMap } from "../utils/toErrorMap";
+import { useLoginMutation } from "../generated/graphql";
 
 interface registerProps {}
 
-const LOGIN_MUTATION = `
-mutation Login($options: UsernamePasswordInput!){
-  login(options: $options){
-    errors{
-      field
-      message
-    }
-    user{
-      id
-      username
-    }
-  }
-}
-`
-
 const Login: React.FC<{}> = ({}) => {
   const router = useRouter()
-  const [,login] = useMutation(LOGIN_MUTATION)
+  const [,login] = useLoginMutation()
   return (
     <Wrapper variant="small">
       <Formik

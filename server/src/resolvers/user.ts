@@ -1,7 +1,17 @@
 import { User } from "../entities/User";
 import { MyContext } from "src/types";
-import { Arg, Ctx, Field, InputType, Mutation, ObjectType, Query, Resolver,} from "type-graphql";
+import {
+  Arg,
+  Ctx,
+  Field,
+  InputType,
+  Mutation,
+  ObjectType,
+  Query,
+  Resolver,
+} from "type-graphql";
 import argon2 from "argon2";
+import { read } from "fs";
 
 @InputType()
 class UsernamePasswordInput {
@@ -31,22 +41,20 @@ class UserResponce {
 
 @Resolver()
 export class UserResolver {
-  @Query(() => User, {nullable:true})
-  async me(
-    @Ctx() {req,em} : MyContext
-  ){
+  @Query(() => User, { nullable: true })
+  async me(@Ctx() { req, em }: MyContext) {
     // you are not login
-    if(!req.session.userId) {
-      return null
+    if (!req.session.userId) {
+      return null;
     }
 
-    const user = await em.findOne(User, {id: req.session.userId}) 
-    return user
+    const user = await em.findOne(User, { id: req.session.userId });
+    return user;
   }
   @Mutation(() => UserResponce)
   async register(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em , req }: MyContext
+    @Ctx() { em, req }: MyContext
   ): Promise<UserResponce> {
     if (options.username.length <= 5) {
       return {
@@ -127,5 +135,21 @@ export class UserResolver {
     req.session.userId = user.id;
 
     return { user };
+  }
+
+  @Mutation(() => Boolean)
+  logout(@Ctx() { req, res }: MyContext) {
+    return new Promise((resolve) =>
+      req.session.destroy((err) => {
+        res.clearCookie("qid");
+        if (err) {
+          console.log(err);
+          resolve(false);
+          return;
+        }
+
+        resolve(true);
+      })
+    );
   }
 }
