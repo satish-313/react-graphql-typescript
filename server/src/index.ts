@@ -5,7 +5,7 @@ import cors from 'cors'
 import {MikroORM} from '@mikro-orm/core'
 import { __prod__ } from './constants'
 import microConfig from './mikro-orm.config'
-
+ 
 // apollo
 import "reflect-metadata"
 import {ApolloServer} from 'apollo-server-express'
@@ -28,7 +28,7 @@ const redisClient = redis.createClient()
 const main = async() => {
   const orm = await MikroORM.init(microConfig)
   await orm.getMigrator().up();
-  
+
   const app = express();
 
   app.use(cors({

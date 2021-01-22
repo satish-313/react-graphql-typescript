@@ -3,7 +3,7 @@ import { Field, Int, ObjectType } from "type-graphql";
 
 @ObjectType()
 @Entity()
-export class User {
+export class Username {
   @Field(() => Int)
   @PrimaryKey()
   id!: number;
@@ -19,6 +19,10 @@ export class User {
   @Field() // if we comment the field we can't expose to use data in graphql
   @Property({ type: "text", unique: true })
   username!: string;
+
+  @Field()
+  @Property({type: "text", unique: true})
+  email!: string;
 
   @Property({ type: "text" })
   password!: string;
