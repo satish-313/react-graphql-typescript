@@ -15,7 +15,7 @@ import { PostResolver } from './resolvers/post'
 import { UserResolver } from './resolvers/user'
 
 // session
-import redis from 'redis'
+import Redis from 'ioredis'
 import session from 'express-session'
 import connectRedis from 'connect-redis'
 
@@ -23,7 +23,7 @@ import connectRedis from 'connect-redis'
 import { MyContext } from './types'
 
 const RedisStore = connectRedis(session)
-const redisClient = redis.createClient()
+const redis = new Redis()
 
 const main = async() => {
   const orm = await MikroORM.init(microConfig)
@@ -39,7 +39,7 @@ const main = async() => {
   app.use(
     session({
       name: 'qid',
-      store: new RedisStore({client: redisClient, disableTouch:true}),
+      store: new RedisStore({client: redis, disableTouch:true}),
       secret: "laldfkajlkdfalkkdafqld",
       cookie: {
         maxAge: 1000 * 60 * 60 * 24, // one day
@@ -57,7 +57,7 @@ const main = async() => {
       resolvers: [HelloResolver,PostResolver,UserResolver],
       validate: false,
     }),
-    context: ({req,res}): MyContext => ({em: orm.em,req,res})
+    context: ({req,res}): MyContext => ({em: orm.em,req,res,redis})
   });
 
   apolloServer.applyMiddleware({
