@@ -2,10 +2,9 @@ import express from 'express'
 import cors from 'cors'
 
 // db
-import {MikroORM} from '@mikro-orm/core'
 import { __prod__ } from './constants'
-import microConfig from './mikro-orm.config'
- 
+import {createConnection} from "typeorm"
+
 // apollo
 import "reflect-metadata"
 import {ApolloServer} from 'apollo-server-express'
@@ -21,13 +20,22 @@ import connectRedis from 'connect-redis'
 
 //types
 import { MyContext } from './types'
+import { Username } from './entities/Username'
+import { Post } from './entities/Post'
 
 const RedisStore = connectRedis(session)
 const redis = new Redis()
 
 const main = async() => {
-  const orm = await MikroORM.init(microConfig)
-  await orm.getMigrator().up();
+  const conn = await createConnection({
+    type: 'postgres',
+    database: 'lireddit2',
+    username: 'postgres',
+    password: 'satish',
+    logging: false,
+    synchronize : true,
+    entities: [Post,Username]
+  })
 
   const app = express();
 
@@ -57,7 +65,7 @@ const main = async() => {
       resolvers: [HelloResolver,PostResolver,UserResolver],
       validate: false,
     }),
-    context: ({req,res}): MyContext => ({em: orm.em,req,res,redis})
+    context: ({req,res}): MyContext => ({req,res,redis})
   });
 
   apolloServer.applyMiddleware({

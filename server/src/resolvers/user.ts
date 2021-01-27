@@ -15,6 +15,7 @@ import { validateRegister } from "../utils/validateRegister";
 import { sendEmail } from "../utils/sendEmail";
 import { v4 } from "uuid";
 import { FORGET_PASSWORD_PREFIX } from "../constants";
+import { getConnection } from "typeorm";
 
 @ObjectType()
 class FieldError {
@@ -39,7 +40,7 @@ export class UserResolver {
   async changePassword(
     @Arg("token") token: string,
     @Arg("newPassword") newPassword: string,
-    @Ctx() { redis, em, req }: MyContext
+    @Ctx() { redis, req }: MyContext
   ): Promise<UserResponce> {
     if (newPassword.length <= 5) {
       return {
@@ -52,7 +53,7 @@ export class UserResolver {
       };
     }
 
-    const key = FORGET_PASSWORD_PREFIX + token
+    const key = FORGET_PASSWORD_PREFIX + token;
     const userId = await redis.get(key);
     if (!userId) {
       return {
@@ -64,8 +65,8 @@ export class UserResolver {
         ],
       };
     }
-
-    const user = await em.findOne(Username, { id: parseInt(userId) });
+    const userIdNum = parseInt(userId);
+    const user = await Username.findOne(userIdNum);
 
     if (!user) {
       return {
@@ -78,24 +79,27 @@ export class UserResolver {
       };
     }
 
-    user.password = await argon2.hash(newPassword);
+    await Username.update(
+      { id: userIdNum },
+      {
+        password: await argon2.hash(newPassword),
+      }
+    );
 
-    await em.persistAndFlush(user);
-
-    await redis.del(key)
+    await redis.del(key);
 
     // login user after changing password
     req.session.userId = user.id;
 
-    return { user};
+    return { user };
   }
 
   @Mutation(() => Boolean)
   async forgotPassword(
     @Arg("email") email: string,
-    @Ctx() { em, redis }: MyContext
+    @Ctx() { redis }: MyContext
   ) {
-    const user = await em.findOne(Username, { email });
+    const user = await Username.findOne({ where: { email } });
     if (!user) {
       // email not in the database
       return true;
@@ -119,33 +123,53 @@ export class UserResolver {
   }
 
   @Query(() => Username, { nullable: true })
-  async me(@Ctx() { req, em }: MyContext) {
+  me(@Ctx() { req }: MyContext) {
     // you are not login
     if (!req.session.userId) {
       return null;
     }
 
-    const user = await em.findOne(Username, { id: req.session.userId });
-    return user;
+    return Username.findOne(req.session.userId);
   }
+
   @Mutation(() => UserResponce)
   async register(
     @Arg("options") options: UsernamePasswordInput,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponce> {
     const errors = validateRegister(options);
     if (errors) {
       return { errors };
     }
 
+    const emailcheck = await Username.findOne({ where: { email: options.email} });
+    if (emailcheck) {
+      return {
+        errors: [
+          {
+            field: "email",
+            message: "email exist",
+          },
+        ],
+      };
+    }
     const hashedPassword = await argon2.hash(options.password);
-    const user = em.create(Username, {
-      username: options.username,
-      email: options.email,
-      password: hashedPassword,
-    });
+    let user;
     try {
-      await em.persistAndFlush(user);
+      const result = await getConnection()
+        .createQueryBuilder()
+        .insert()
+        .into(Username)
+        .values({
+          username: options.username,
+          email: options.email,
+          password: hashedPassword,
+        })
+        .returning("*")
+        .execute();
+
+      user = result.raw[0];
+      // console.log("result:", result);
     } catch (error) {
       if (error.code === "23505" || error.detail.include("already exists")) {
         return {
@@ -168,15 +192,14 @@ export class UserResolver {
   async login(
     @Arg("usernameOrEmail") usernameOrEmail: string,
     @Arg("password") password: string,
-    @Ctx() { em, req }: MyContext
+    @Ctx() { req }: MyContext
   ): Promise<UserResponce> {
-    const user = await em.findOne(
-      Username,
+    const user = await Username.findOne(
       usernameOrEmail.includes("@")
-        ? { email: usernameOrEmail }
-        : { username: usernameOrEmail }
+        ? { where: { email: usernameOrEmail } }
+        : { where: { username: usernameOrEmail } }
     );
-    
+
     if (!user) {
       return {
         errors: [

@@ -1,3 +1,4 @@
+import { Username } from "../entities/Username";
 import { UsernamePasswordInput } from "./UsernamePasswordInput";
 
 export const validateRegister = (options: UsernamePasswordInput) => {
@@ -36,5 +37,6 @@ export const validateRegister = (options: UsernamePasswordInput) => {
       },
     ];
   }
+
   return null;
 };
