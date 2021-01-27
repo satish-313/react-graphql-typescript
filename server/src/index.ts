@@ -1,5 +1,6 @@
 import express from 'express'
 import cors from 'cors'
+import path from 'path'
 
 // db
 import { __prod__ } from './constants'
@@ -34,8 +35,11 @@ const main = async() => {
     password: 'satish',
     logging: false,
     synchronize : true,
+    migrations: [path.join(__dirname,"./migrations/*")],
     entities: [Post,Username]
   })
+
+  await conn.runMigrations()
 
   const app = express();
 
