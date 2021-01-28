@@ -29,7 +29,7 @@ export class Post extends BaseEntity {
   creator: Username;
 
   @Field(() => String)
-  @CreateDateColumn({ type: "date" })
+  @CreateDateColumn()
   createdAt = new Date();
 
   @Field(() => String)

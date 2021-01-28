@@ -13,17 +13,19 @@ import {
   Stack,
   Text,
 } from "@chakra-ui/react";
+import { useState } from "react";
 
 const Index = () => {
+  const [variables, setVariables] = useState({ limit: 25, cursor: null as null | string });
   const [{ data, fetching }] = usePostsQuery({
-    variables: {
-      limit: 5,
-    },
+    variables,
   });
 
   if (!fetching && !data) {
     return <div> you got query failed for some reason!!</div>;
   }
+
+  // console.log(variables)
 
   return (
     <Layout variant="regular">
@@ -39,20 +41,32 @@ const Index = () => {
         <div>Loading..</div>
       ) : (
         <Stack spacing={8}>
-          {data!.posts.map((p) => (
-            <Box key={p.id} p={5} shadow="md" borderWith="1px">
+          {data!.posts.posts.map((p) => (
+            <Box key={p.id} p={5} shadow="md" borderWidth={1}>
               <Heading fontSize="xl">{p.title}</Heading>
               <Text mt={4}>{p.textSnippet}</Text>
             </Box>
           ))}
         </Stack>
       )}
-      {data ? (
+      {data && data.posts.hasMore ? (
         <Flex isLoad justify="center" align="center">
-          <Button isLoading={fetching} my={8}>load more</Button>
+          <Button
+            onClick={() => {
+              setVariables({
+                limit: variables.limit,
+                cursor: data.posts.posts[data.posts.posts.length - 1].createdAt,
+              });
+            }}
+            isLoading={fetching}
+            my={8}
+          >
+            load more
+          </Button>
         </Flex>
       ) : null}
     </Layout>
   );
 };
+
 export default withUrqlClient(createUrqlClient, { ssr: true })(Index);
