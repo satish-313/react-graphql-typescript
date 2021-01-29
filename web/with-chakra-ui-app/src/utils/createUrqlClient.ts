@@ -42,7 +42,10 @@ const cursorPagination = (): Resolver => {
     // console.log("fieldArgs",fieldArgs)
     const fieldKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
     // console.log("key we created", fieldKey)
-    const isItInTheCache = cache.resolve(cache.resolve(entityKey, fieldKey) as string, "posts") ;
+    const isItInTheCache = cache.resolve(
+      cache.resolve(entityKey, fieldKey) as string,
+      "posts"
+    );
     // console.log("isItInTheCache",isItInTheCache)
 
     info.partial = !isItInTheCache;
@@ -52,10 +55,10 @@ const cursorPagination = (): Resolver => {
     fieldInfos.forEach((fi) => {
       const key = cache.resolve(entityKey, fi.fieldKey) as string;
       const data = cache.resolve(key, "posts") as string[];
-      const hasmore = cache.resolve(key,"hasMore")
+      const hasmore = cache.resolve(key, "hasMore");
       // console.log("data:", data);
       // console.log("HasMore",hasmore);
-      if(!hasmore){
+      if (!hasmore) {
         hasMore = hasmore as boolean;
       }
       results.push(...data);
@@ -64,7 +67,7 @@ const cursorPagination = (): Resolver => {
     return {
       hasMore,
       posts: results,
-      __typename: "PaginatedPosts"
+      __typename: "PaginatedPosts",
     };
   };
 };
@@ -84,6 +87,15 @@ export const createUrqlClient = (ssrExchange: any) => ({
       },
       updates: {
         Mutation: {
+          createPost: (_result, args, cache, info) => {
+            const allFields = cache.inspectFields("Query");
+            const fieldInfos = allFields.filter(
+              (info) => info.fieldName === "posts"
+            )
+            fieldInfos.forEach((fi) =>{
+              cache.invalidate("Query", "posts", fi.arguments || {});
+            })
+          },
           logout: (_result, args, cache, info) => {
             betterUpdateQuery<LogoutMutation, MeQuery>(
               cache,

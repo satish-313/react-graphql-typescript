@@ -23,6 +23,7 @@ import connectRedis from 'connect-redis'
 import { MyContext } from './types'
 import { Username } from './entities/Username'
 import { Post } from './entities/Post'
+import {Updoot} from './entities/Updoot'
 
 const RedisStore = connectRedis(session)
 const redis = new Redis()
@@ -36,7 +37,7 @@ const main = async() => {
     logging: false,
     synchronize : true,
     migrations: [path.join(__dirname,"./migrations/*")],
-    entities: [Post,Username]
+    entities: [Post,Username,Updoot]
   })
 
   await conn.runMigrations()
