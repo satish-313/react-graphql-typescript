@@ -19,6 +19,9 @@ const UpdootSection: React.FC<UpdootSectionProps> = ({ p }) => {
         aria-label="chevronUpIcon"
         icon={<ChevronUpIcon />}
         onClick={async () => {
+          if(p.voteStatus === 1){
+            return;
+          }
           setLoadingState("updoot-loading");
           await vote({
             postId: p.id,
@@ -26,24 +29,26 @@ const UpdootSection: React.FC<UpdootSectionProps> = ({ p }) => {
           });
           setLoadingState("not-loading");
         }}
-        isLoading={loadingState==="updoot-loading"}
+        colorScheme={p.voteStatus === 1 ? "green" : undefined}
+        isLoading={loadingState === "updoot-loading"}
       />
       {p.points}
       <IconButton
         aria-label="chevronDownIcon"
-        icon={
-          <ChevronDownIcon
-            onClick={ async() => {
-              setLoadingState("downdoot-loading");
-              await vote({
-                postId: p.id,
-                value: -1,
-              });
-              setLoadingState("not-loading");
-            }}
-          />
-        }
-        isLoading={loadingState==="downdoot-loading"}
+        icon={<ChevronDownIcon />}
+        onClick={async () => {
+          if(p.voteStatus === -1){
+            return;
+          }
+          setLoadingState("downdoot-loading");
+          await vote({
+            postId: p.id,
+            value: -1,
+          });
+          setLoadingState("not-loading");
+        }}
+        isLoading={loadingState === "downdoot-loading"}
+        colorScheme={p.voteStatus === -1 ? "red" : undefined}
       />
     </Flex>
   );

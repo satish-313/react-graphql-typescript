@@ -59,8 +59,10 @@ export class PostResolver {
     //   value: realValue,
     // });
 
-    const updoot = await Updoot.findOne({ where: { postId, userId } });
+    // console.log("postId",postId,"value",value,"realValue",realValue)
 
+    const updoot = await Updoot.findOne({ where: { postId, userId } });
+    // console.log("updoot",updoot)
     // the user has voted on the post before
     // they are changing vote
     if (updoot && updoot.value !== realValue) {
@@ -119,22 +121,36 @@ export class PostResolver {
     //   COMMIT;
     // `
     // );
+
     return true;
   }
 
   @Query(() => PaginatedPosts)
   async posts(
     @Arg("limit", () => Int) limit: number,
-    @Arg("cursor", () => String, { nullable: true }) cursor: string | null
+    @Arg("cursor", () => String, { nullable: true }) cursor: string | null,
+    @Ctx() { req }: MyContext
   ): Promise<PaginatedPosts> {
     const realLimit = Math.min(50, limit);
     const realLimitPlusOne = realLimit + 1;
+    const { userId } = req.session;
 
     const replacements: any[] = [realLimitPlusOne];
 
+    if (userId) {
+      // console.log("user exits")
+      replacements.push(userId);
+    }
+
+    let cursorIdx = 3;
     if (cursor) {
       replacements.push(new Date(parseInt(cursor)));
+      // console.log("lenght",replacements.length)
+      cursorIdx = replacements.length;
     }
+
+    // console.log("cursorIdx",cursorIdx)
+    // console.log("replacement",replacements)
 
     const posts = await getConnection().query(
       `
@@ -143,10 +159,15 @@ export class PostResolver {
         'id', u.id,
         'username', u.username,
         'email',u.email
-      ) creator
+      ) creator,
+      ${
+        userId
+          ? '(select value from updoot where "userId" = $2 and "postId" = p.id) "voteStatus"'
+          : 'null as "voteStatus"'
+      }
       from post p 
       inner join username u on u.id = p."creatorId"
-      ${cursor ? `where p."createdAt" <$2` : ""}
+      ${cursor ? `where p."createdAt" <$${userId ? "3" : "2"}` : ""}
       order by p."createdAt" DESC
       limit $1
     `,
@@ -175,7 +196,7 @@ export class PostResolver {
 
   @Query(() => Post, { nullable: true })
   post(@Arg("id", () => Int) id: number): Promise<Post | undefined> {
-    return Post.findOne(id);
+    return Post.findOne(id, { relations: ["creator"] });
   }
 
   @Mutation(() => Post)
@@ -206,9 +227,13 @@ export class PostResolver {
   }
 
   @Mutation(() => Boolean)
-  async deletePost(@Arg("id", () => Int) id: number): Promise<Boolean> {
+  @UseMiddleware(isAuth)
+  async deletePost(
+    @Arg("id", () => Int) id: number,
+    @Ctx() { req }: MyContext
+  ): Promise<Boolean> {
     try {
-      await Post.delete(id);
+      await Post.delete({id, creatorId: req.session.userId});
     } catch (error) {
       return false;
     }
