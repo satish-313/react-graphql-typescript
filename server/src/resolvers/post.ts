@@ -142,11 +142,8 @@ export class PostResolver {
       replacements.push(userId);
     }
 
-    let cursorIdx = 3;
     if (cursor) {
       replacements.push(new Date(parseInt(cursor)));
-      // console.log("lenght",replacements.length)
-      cursorIdx = replacements.length;
     }
 
     // console.log("cursorIdx",cursorIdx)
@@ -212,18 +209,22 @@ export class PostResolver {
   }
 
   @Mutation(() => Post, { nullable: true })
+  @UseMiddleware(isAuth)
   async updatePost(
-    @Arg("id") id: number,
-    @Arg("title", () => String, { nullable: true }) title: string
+    @Arg("id" ,() => Int) id: number,
+    @Arg("title") title: string,
+    @Arg("text") text: string,
+    @Ctx() { req }: MyContext
   ): Promise<Post | null> {
-    const post = await Post.findOne(id);
-    if (!post) {
-      return null;
-    }
-    if (typeof title !== "undefined") {
-      await Post.update({ id }, { title });
-    }
-    return post;
+    const post = await getConnection()
+      .createQueryBuilder()
+      .update(Post)
+      .set({ title, text })
+      .where('id=:id and "creatorId"= :creatorId', { id, creatorId: req.session.userId })
+      .returning("*")
+      .execute();
+
+    return post.raw[0] ;
   }
 
   @Mutation(() => Boolean)
@@ -233,7 +234,7 @@ export class PostResolver {
     @Ctx() { req }: MyContext
   ): Promise<Boolean> {
     try {
-      await Post.delete({id, creatorId: req.session.userId});
+      await Post.delete({ id, creatorId: req.session.userId });
     } catch (error) {
       return false;
     }
